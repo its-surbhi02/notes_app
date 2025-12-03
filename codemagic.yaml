@@ -4,7 +4,7 @@ workflows:
 
     environment:
       groups:
-        - android_credentials   # This is your group name (keystore, passwords)
+        - keystore_credentials   # This is your group name (keystore, passwords)
 
     scripts:
       - name: Install Flutter dependencies
