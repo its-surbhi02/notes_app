@@ -98,7 +98,7 @@ class _AdsScreenState extends State<AdsScreen> {
 
   void _showInterstitialAd() {
     if (_interstitialAd == null) {
-      Fluttertoast.showToast(msg: "Interstitial ad not loaded yet");
+      Fluttertoast.showToast(msg: "Interstitial ad not loaded yet, Please wait a second and try again");
       return;
     }
     _interstitialAd!.show();
@@ -108,7 +108,7 @@ class _AdsScreenState extends State<AdsScreen> {
 
   void _showRewardedAd() {
     if (_rewardedAd == null) {
-      Fluttertoast.showToast(msg: "Rewarded ad not loaded");
+      Fluttertoast.showToast(msg: "Rewarded ad not loaded, Please wait a second and try again");
       return;
     }
     _rewardedAd!.show(
