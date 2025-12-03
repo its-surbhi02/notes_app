@@ -53,5 +53,5 @@ workflows:
       # optional: keep for manual download, or configure Google Play publishing
       email:
         recipients:
-          - your-email@example.com
+          - kumarisurbhi.ctps@gmail.com
         on_build_state: all
