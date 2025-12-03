@@ -1,12 +1,57 @@
 workflows:
-  release-apk:
-    name: Build APK
+  android-release:
+    name: Android Release (signed APK)
+    max_build_duration: 60
     environment:
       groups:
-        - keystore_credentials  
+        - release-keys      # <-- create this group in Codemagic UI (see steps above)
       flutter: stable
+      vars:
+        # Output artifact path used by publishing step
+        APK_OUTPUT_PATH: build/app/outputs/flutter-apk/app-release.apk
+
     scripts:
-      - flutter pub get
-      - flutter build apk --release
+      - name: Install dependencies
+        script: |
+          flutter pub get
+
+      # Decode keystore into android/app/keystore.jks
+      - name: Restore keystore
+        script: |
+          if [ -z "${KEYSTORE_BASE64}" ]; then
+            echo "ERROR: KEYSTORE_BASE64 is not set"
+            exit 1
+          fi
+          mkdir -p android/app
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/keystore.jks
+          ls -l android/app/keystore.jks
+
+      # Write android/key.properties from env vars (safe: not printed)
+      - name: Create key.properties
+        script: |
+          mkdir -p android
+          cat > android/key.properties <<EOF
+          storePassword=${STORE_PASSWORD}
+          keyPassword=${KEY_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          storeFile=app/keystore.jks
+          EOF
+          echo "Created android/key.properties"
+
+      - name: Flutter clean
+        script: |
+          flutter clean
+
+      - name: Build release APK
+        script: |
+          flutter build apk --release --no-tree-shake-icons
+
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+      - $APK_OUTPUT_PATH
+
+    publishing:
+      # optional: keep for manual download, or configure Google Play publishing
+      email:
+        recipients:
+          - your-email@example.com
+        on_build_state: all
