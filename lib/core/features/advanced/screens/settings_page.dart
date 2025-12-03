@@ -44,16 +44,6 @@ class SettingsPage extends StatelessWidget {
             subtitle: "1.0.0",
             onTap: () {},
           ),
-
-          _buildSettingTile(
-            icon: Icons.color_lens_outlined,
-            title: "Theme",
-            subtitle: "Light Mode",
-            onTap: () {
-              Fluttertoast.showToast(msg: "Theme feature coming soon!");
-            },
-          ),
-
           const SizedBox(height: 20),
 
           // ----------------------------
