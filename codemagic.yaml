@@ -2,6 +2,8 @@ workflows:
   release-apk:
     name: Build APK
     environment:
+      groups:
+        - keystore_credentials  
       flutter: stable
     scripts:
       - flutter pub get
