@@ -20,7 +20,7 @@ class SupabaseStorageService {
 
       if (response.isNotEmpty) {
         String publicUrl = getPublicUrl(storagePath);
-        Fluttertoast.showToast(msg: "Image uploaded successfully!");
+        // Fluttertoast.showToast(msg: "Image uploaded successfully!");
         return publicUrl;
       } else {
         Fluttertoast.showToast(msg: "Upload failed (empty response).");
