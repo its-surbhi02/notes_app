@@ -261,9 +261,8 @@ import 'package:intl/intl.dart';
 import 'package:notes/core/features/auth/services/assemblyai_service.dart';
 import 'package:notes/core/features/auth/services/audio_recorder_service.dart';
 
-// --- IMPORTS FOR NEW SERVICES ---
-// Ensure you have created these files in 'lib/core/services/' as discussed
-import 'package:notes/core/services/supabase_storage_service.dart';   
+import 'package:notes/core/services/supabase_storage_service.dart';
+ 
 
 class AddEditNoteScreen extends StatefulWidget {
   final DocumentSnapshot? note;
@@ -279,22 +278,18 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   final _content = TextEditingController();
   bool get isEditing => widget.note != null;
 
-  // Category support
   final List<String> _categories = ['General', 'Work', 'Personal', 'Shopping', 'Ideas'];
   String _selectedCategory = 'General';
 
-  // --- Image Variables ---
   File? _pickedImage;           
   String? _existingImageUrl;    
   final ImagePicker _picker = ImagePicker();
   
-  // --- NEW: Audio & AI Variables ---
-  bool _isUploading = false;     // General loading state (save/upload)
-  bool _isRecording = false;     // Is the mic active?
-  bool _isTranscribing = false;  // Is AssemblyAI processing?
-  String? _audioUrl;             // URL of uploaded audio (to save in Firestore)
+  bool _isUploading = false;     
+  bool _isRecording = false;     
+  bool _isTranscribing = false;  
+  String? _audioUrl;             
 
-  // --- Services ---
   final SupabaseStorageService _storageService = SupabaseStorageService();
   final AudioRecorderService _recorderService = AudioRecorderService();
   final AssemblyAIService _assemblyService = AssemblyAIService();
@@ -307,11 +302,9 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
       _title.text = (data["title"] ?? '').toString();
       _content.text = (data["content"] ?? '').toString();
       
-      // Load existing image URL
       if (data["imageUrl"] != null) {
         _existingImageUrl = data["imageUrl"].toString();
       }
-      // Load existing audio URL
       if (data["audioUrl"] != null) {
         _audioUrl = data["audioUrl"].toString();
       }
@@ -330,11 +323,10 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   void dispose() {
     _title.dispose();
     _content.dispose();
-    _recorderService.dispose(); // Clean up recorder
+    _recorderService.dispose(); 
     super.dispose();
   }
 
-  // --- Image Functions ---
   Future<void> _pickImage() async {
     try {
       final XFile? picked = await _picker.pickImage(
@@ -359,17 +351,13 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
     });
   }
 
-  // --- NEW: Audio Recording & Transcription Logic ---
   Future<void> _toggleRecording() async {
-    if (_isTranscribing) return; // Block input while processing
+    if (_isTranscribing) return; 
 
     try {
       if (_isRecording) {
-        // STOP RECORDING
         await _stopRecordingAndTranscribe();
       } else {
-        // START RECORDING
-        // Check permissions first (handled inside service, but good to debug)
         bool hasPermission = await _recorderService.hasPermission();
         if (!hasPermission) {
           Fluttertoast.showToast(msg: "Microphone permission denied");
@@ -378,59 +366,42 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
 
         await _recorderService.startRecording();
         setState(() => _isRecording = true);
-        Fluttertoast.showToast(msg: "Recording started...");
-        print("DEBUG: Recording Started");
+        // Toast removed to keep UI clean, or keep minimal:
+        // Fluttertoast.showToast(msg: "Recording..."); 
       }
     } catch (e) {
-      print("DEBUG: Error toggling recording: $e");
       Fluttertoast.showToast(msg: "Error: $e");
-      setState(() => _isRecording = false); // Reset state on error
+      setState(() => _isRecording = false);
     }
   }
 
   Future<void> _stopRecordingAndTranscribe() async {
     try {
-      print("DEBUG: Stopping recording...");
-      // 1. Stop Recorder
       final String? path = await _recorderService.stopRecording();
       setState(() => _isRecording = false);
       
-      if (path == null) {
-        Fluttertoast.showToast(msg: "Recording failed (File not found)");
-        return;
-      }
+      if (path == null) return;
 
-      print("DEBUG: Recorded file at $path");
-      setState(() => _isTranscribing = true); // Show loading spinner
-      Fluttertoast.showToast(msg: "Processing audio...");
+      setState(() => _isTranscribing = true); 
+      // Removed "Processing audio..." toast per your request
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        Fluttertoast.showToast(msg: "User not logged in");
         setState(() => _isTranscribing = false);
         return;
       }
 
-      // 2. Upload Audio to Supabase
-      // Path: audio/{uid}/{timestamp}.m4a
       final storagePath = 'audio/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.m4a';
       final uploadedUrl = await _storageService.uploadImage(File(path), storagePath);
 
-      if (uploadedUrl == null) {
-        throw Exception("Failed to upload audio file");
-      }
+      if (uploadedUrl == null) throw Exception("Upload failed");
       
-      print("DEBUG: Uploaded audio to $uploadedUrl");
-
-      // Save URL for Firestore
       setState(() {
         _audioUrl = uploadedUrl;
       });
 
-      // 3. Send to AssemblyAI for Transcription
       final String? text = await _assemblyService.transcribeAudio(uploadedUrl);
 
-      // 4. Update Content
       if (text != null && text.isNotEmpty) {
         setState(() {
           if (_content.text.isEmpty) {
@@ -439,20 +410,18 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
             _content.text = "${_content.text}\n\n$text";
           }
         });
-        Fluttertoast.showToast(msg: "Transcription complete!");
+        // Removed "Transcription complete!" toast per your request
       } else {
-        Fluttertoast.showToast(msg: "Could not transcribe audio.");
-        print("DEBUG: Transcription returned null");
+        // We only show toast if it failed completely
+        Fluttertoast.showToast(msg: "No speech detected");
       }
 
     } catch (e) {
-      print("DEBUG: Transcription process error: $e");
       Fluttertoast.showToast(msg: "Error: $e");
     } finally {
       setState(() => _isTranscribing = false);
     }
   }
-  // ---------------------------
 
   Future<void> _saveNote() async {
     final title = _title.text.trim();
@@ -469,7 +438,7 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
       return;
     }
 
-    setState(() => _isUploading = true); // Start loading
+    setState(() => _isUploading = true); 
 
     final ref = FirebaseFirestore.instance
         .collection("users")
@@ -479,7 +448,6 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
     try {
       String? finalImageUrl = _existingImageUrl;
 
-      // 1. Upload Image to Supabase if a new one is picked
       if (_pickedImage != null) {
         final path = 'notes/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg';
         final url = await _storageService.uploadImage(_pickedImage!, path);
@@ -490,17 +458,15 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
         }
       }
 
-      // 2. Prepare Data (Including new Audio URL)
       final Map<String, dynamic> dataToSave = {
         "title": title,
         "content": content,
         "category": _selectedCategory,
         "imageUrl": finalImageUrl, 
-        "audioUrl": _audioUrl, // NEW: Save the audio link
+        "audioUrl": _audioUrl, 
         "modifiedAt": FieldValue.serverTimestamp(),
       };
 
-      // 3. Save to Firestore
       if (isEditing) {
         await ref.doc(widget.note!.id).update(dataToSave);
         Fluttertoast.showToast(msg: "Note updated");
@@ -531,7 +497,6 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
     }
   }
 
-  // Helper widget to display the image
   Widget _buildImagePreview() {
     if (_pickedImage == null && (_existingImageUrl == null || _existingImageUrl!.isEmpty)) {
       return const SizedBox.shrink(); 
@@ -570,31 +535,6 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
     );
   }
 
-  // New helper to show audio attached indicator
-  Widget _buildAudioIndicator() {
-    if (_audioUrl == null) return const SizedBox.shrink();
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.mic, size: 20, color: Color(0xFFF46D3A)),
-          SizedBox(width: 8),
-          Text("Audio attached", style: TextStyle(color: Color(0xFFF46D3A), fontWeight: FontWeight.bold)),
-          SizedBox(width: 8),
-          Icon(Icons.check_circle, size: 16, color: Colors.green),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     const Color orange = Color(0xFFF46D3A);
@@ -616,27 +556,27 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
-          // --- NEW: Microphone Button ---
+          // --- UPDATED: Microphone / Stop Button ---
           IconButton(
             onPressed: (_isUploading || _isTranscribing) ? null : _toggleRecording,
             icon: _isTranscribing
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : Icon(
-                    _isRecording ? Icons.stop_circle : Icons.mic,
-                    color: _isRecording ? Colors.redAccent : Colors.white,
+                    // If recording, show a Square (Stop), else show Mic
+                    _isRecording ? Icons.stop : Icons.mic,
+                    // Use WHITE for both so it is visible on Orange background
+                    color: Colors.white, 
                     size: 28,
                   ),
-            tooltip: _isRecording ? 'Stop & Transcribe' : 'Record Audio',
+            tooltip: _isRecording ? 'Stop Recording' : 'Record Audio',
           ),
 
-          // Attachment Button
           IconButton(
             icon: const Icon(Icons.attach_file, color: Colors.white),
             onPressed: (_isUploading || _isRecording) ? null : _pickImage,
             tooltip: 'Attach Image',
           ),
 
-          // Save Button
           IconButton(
             icon: _isUploading 
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -656,7 +596,6 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // TITLE FIELD
                   TextField(
                     controller: _title,
                     style: const TextStyle(
@@ -675,15 +614,12 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
                     ),
                   ),
 
-                  // Image Preview 
                   _buildImagePreview(),
 
-                  // Audio Indicator (New)
-                  _buildAudioIndicator(),
+                  // Removed _buildAudioIndicator() call here
 
                   const SizedBox(height: 8),
 
-                  // CATEGORY DROPDOWN
                   Row(
                     children: [
                       const SizedBox(width: 2),
@@ -713,7 +649,6 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
 
                   const SizedBox(height: 10),
 
-                  // CONTENT FIELD
                   Expanded(
                     child: TextField(
                       controller: _content,
@@ -739,7 +674,6 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
             ),
           ),
 
-          // META: Creation / Last edited section
           Padding(
             padding: const EdgeInsets.only(bottom: 18),
             child: Column(
