@@ -1,12 +1,45 @@
 
 
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+// --- MODEL CLASS FOR CHAT SESSIONS ---
+class ChatSession {
+  String id;
+  String title;
+  List<Map<String, String>> messages;
+  DateTime timestamp;
 
+  ChatSession({
+    required this.id,
+    required this.title,
+    required this.messages,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'messages': messages,
+        'timestamp': timestamp.toIso8601String(),
+      };
+
+  factory ChatSession.fromJson(Map<String, dynamic> json) {
+    return ChatSession(
+      id: json['id'],
+      title: json['title'],
+      messages: List<Map<String, String>>.from(
+        (json['messages'] as List).map((item) => Map<String, String>.from(item)),
+      ),
+      timestamp: DateTime.parse(json['timestamp']),
+    );
+  }
+}
+
+// --- MAIN SCREEN ---
 class AiToolsScreen extends StatefulWidget {
   const AiToolsScreen({super.key});
 
@@ -17,60 +50,127 @@ class AiToolsScreen extends StatefulWidget {
 class _AiToolsScreenState extends State<AiToolsScreen> {
   final TextEditingController _promptController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isLoading = false;
-  final List<Map<String, String>> _messages = [];
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // ✅ Store the API key in the widget's state
+  bool _isLoading = false;
   String _apiKey = "";
+  
+  // History State
+  List<ChatSession> _sessions = []; 
+  String? _currentSessionId; 
+  List<Map<String, String>> _currentMessages = []; 
 
   @override
   void initState() {
     super.initState();
-    // ✅ Load the key here, after main.dart has loaded the .env file
     _apiKey = dotenv.env['API_KEY'] ?? "API_KEY_NOT_FOUND";
+    
+    _loadHistory().then((_) {
+      if (_sessions.isEmpty) {
+        _startNewChat();
+      } else {
+        _startNewChat(); // Start fresh by default, or remove this to load last chat
+      }
+    });
 
     if (_apiKey == "API_KEY_NOT_FOUND") {
-      print("Error: API_KEY not found in .env file.");
-      _messages.add({
+      _currentMessages.add({
         "role": "ai",
         "text": "Error: API_KEY is not configured. Please contact support."
       });
     }
   }
 
-  /// 🔥 Gemini API Call
-  Future<void> _generateContent() async {
-    final prompt = _promptController.text.trim();
+  // --- STORAGE LOGIC ---
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? historyJson = prefs.getString('chat_history');
+    
+    if (historyJson != null) {
+      final List<dynamic> decoded = jsonDecode(historyJson);
+      setState(() {
+        _sessions = decoded.map((json) => ChatSession.fromJson(json)).toList();
+        _sessions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      });
+    }
+  }
 
-    if (prompt.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter a message."),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
+  Future<void> _saveHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String encoded = jsonEncode(_sessions.map((s) => s.toJson()).toList());
+    await prefs.setString('chat_history', encoded);
+  }
+
+  // --- SESSION MANAGEMENT ---
+  void _startNewChat() {
+    setState(() {
+      _currentSessionId = DateTime.now().millisecondsSinceEpoch.toString();
+      _currentMessages = [];
+      _isLoading = false;
+    });
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      Navigator.pop(context);
+    }
+  }
+
+  void _loadSession(ChatSession session) {
+    setState(() {
+      _currentSessionId = session.id;
+      _currentMessages = List.from(session.messages);
+    });
+    Navigator.pop(context);
+  }
+
+  void _updateCurrentSessionInHistory() {
+    final index = _sessions.indexWhere((s) => s.id == _currentSessionId);
+    
+    String title = "New Chat";
+    if (_currentMessages.isNotEmpty) {
+      title = _currentMessages[0]['text'] ?? "Chat";
+      if (title.length > 20) title = "${title.substring(0, 20)}...";
     }
 
-    // Add user message
+    final updatedSession = ChatSession(
+      id: _currentSessionId!,
+      title: title,
+      messages: _currentMessages,
+      timestamp: DateTime.now(),
+    );
+
     setState(() {
-      _messages.add({"role": "user", "text": prompt});
+      if (index != -1) {
+        _sessions[index] = updatedSession;
+        _sessions.removeAt(index);
+        _sessions.insert(0, updatedSession);
+      } else {
+        _sessions.insert(0, updatedSession);
+      }
+    });
+    
+    _saveHistory();
+  }
+
+  // --- API LOGIC ---
+  Future<void> _generateContent() async {
+    final prompt = _promptController.text.trim();
+    if (prompt.isEmpty) return;
+
+    setState(() {
+      _currentMessages.add({"role": "user", "text": prompt});
       _isLoading = true;
       _promptController.clear();
     });
 
-    // API URL
+    _updateCurrentSessionInHistory(); // Save user prompt
+
     final url = Uri.parse(
-      // ✅ Use the state variable _apiKey
       "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=$_apiKey",
     );
 
     final requestBody = {
       "contents": [
         {
-          "parts": [
-            {"text": prompt}
-          ]
+          "parts": [{"text": prompt}]
         }
       ]
     };
@@ -84,29 +184,30 @@ class _AiToolsScreenState extends State<AiToolsScreen> {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        final aiText =
-            json["candidates"][0]["content"]["parts"][0]["text"] ?? "No response";
+        final aiText = json["candidates"][0]["content"]["parts"][0]["text"] ?? "No response";
 
         setState(() {
-          _messages.add({"role": "ai", "text": aiText});
+          _currentMessages.add({"role": "ai", "text": aiText});
         });
       } else {
         final error = jsonDecode(response.body);
         final msg = error['error']?['message'] ?? "Unknown error";
-
         setState(() {
-          _messages.add({"role": "ai", "text": "❌ API Error: $msg"});
+          _currentMessages.add({"role": "ai", "text": "❌ Error: $msg"});
         });
       }
     } catch (e) {
       setState(() {
-        _messages.add({"role": "ai", "text": "🚫 Failed: $e"});
+        _currentMessages.add({"role": "ai", "text": "🚫 Failed: $e"});
       });
     }
 
     setState(() => _isLoading = false);
+    _updateCurrentSessionInHistory(); // Save AI response
+    _scrollToBottom();
+  }
 
-    // Auto-scroll to latest
+  void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!_scrollController.hasClients) return;
       _scrollController.animateTo(
@@ -117,36 +218,120 @@ class _AiToolsScreenState extends State<AiToolsScreen> {
     });
   }
 
+  // --- UI BUILD ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF0F4F8),
+      
+      // SIDEBAR (DRAWER)
+      drawer: Drawer(
+        backgroundColor: const Color(0xFFF8F9FA),
+        child: Column(
+          children: [
+            const SizedBox(height: 50),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _startNewChat,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE2934A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text("New Chat"),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text("Recent", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: _sessions.length,
+                itemBuilder: (context, index) {
+                  final session = _sessions[index];
+                  return ListTile(
+                    leading: const Icon(Icons.chat_bubble_outline, size: 20),
+                    title: Text(
+                      session.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    onTap: () => _loadSession(session),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                      onPressed: () {
+                         setState(() {
+                           _sessions.removeAt(index);
+                           _saveHistory();
+                           if(_currentSessionId == session.id) _startNewChat();
+                         });
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
 
-      /// Top AppBar
+      // TOP BAR
       appBar: AppBar(
         title: const Text(
-          "Your AI Assistant",
+          "AI Assistant",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: const Color(0xFFE2934A),
         elevation: 1,
+        
+        // Left Menu Button
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
+
+        // Right Back Button (Your Request)
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.exit_to_app, color: Colors.white),
+            tooltip: 'Go Back',
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          const SizedBox(width: 8), // Little padding
+        ],
       ),
 
-      /// Body: Chat messages + Input
+      // CHAT AREA
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
+              itemCount: _currentMessages.length,
               itemBuilder: (context, index) {
-                final msg = _messages[index];
+                final msg = _currentMessages[index];
                 final isUser = msg["role"] == "user";
 
                 return Align(
-                  alignment:
-                      isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     padding: const EdgeInsets.all(14),
@@ -154,9 +339,7 @@ class _AiToolsScreenState extends State<AiToolsScreen> {
                       maxWidth: MediaQuery.of(context).size.width * 0.75,
                     ),
                     decoration: BoxDecoration(
-                      color: isUser
-                          ? const Color(0xFF4A90E2)
-                          : Colors.white,
+                      color: isUser ? const Color(0xFF4A90E2) : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -166,8 +349,6 @@ class _AiToolsScreenState extends State<AiToolsScreen> {
                         ),
                       ],
                     ),
-
-                    /// SELECTABLE TEXT
                     child: SelectableText(
                       msg["text"] ?? "",
                       style: TextStyle(
@@ -181,8 +362,8 @@ class _AiToolsScreenState extends State<AiToolsScreen> {
               },
             ),
           ),
-
-          /// Bottom Input Bar
+          
+          // INPUT AREA
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: const BoxDecoration(
@@ -208,15 +389,10 @@ class _AiToolsScreenState extends State<AiToolsScreen> {
                     onSubmitted: (_) => _generateContent(),
                   ),
                 ),
-
-                /// Send Button
                 IconButton(
                   icon: _isLoading
                       ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                          width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.send, color: Color(0xFF4A90E2)),
                   onPressed: _isLoading ? null : _generateContent,
                 ),

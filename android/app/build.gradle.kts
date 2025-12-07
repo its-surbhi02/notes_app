@@ -37,21 +37,14 @@ android {
         versionName = flutter.versionName
     }
    signingConfigs {
-        release {
-            // key.properties is no longer needed for CI, but good for local dev
-            // check if the CI variable exists, otherwise fall back to local properties
-            if (System.getenv("CM_KEYSTORE_PATH")) {
-                storeFile file(System.getenv("CM_KEYSTORE_PATH"))
-                storePassword System.getenv("CM_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("CM_KEY_ALIAS")
-                keyPassword System.getenv("CM_KEY_PASSWORD")
-            } else {
-                // Your existing local setup (optional)
-                // storeFile file("keystore.jks") 
-                // ...
-            }
-        }
+    create("release") {
+        // temporary hard-coded signing (use your real password and alias here)
+        storeFile = rootProject.file("app/keystore.jks")
+        storePassword = "123456789"
+        keyAlias = "noteskey"
+        keyPassword = "123456789"
     }
+}
 
     buildTypes {
         getByName("release") {
