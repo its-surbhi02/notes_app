@@ -4,9 +4,29 @@ workflows:
 
     environment:
       groups:
-        - keystore_credentials   # This is your group name (keystore, passwords)
+        - keystore_credentials   # your keystore group
+
+      vars:
+        API_KEY: Encrypted(API_KEY)
+        SUPABASE_URL: Encrypted(SUPABASE_URL)
+        SUPABASE_ANON_KEY: Encrypted(SUPABASE_ANON_KEY)
+        ASSEMBLYAI_API_KEY: Encrypted(ASSEMBLYAI_API_KEY)
+        KEYSTORE_BASE64: Encrypted(KEYSTORE_BASE64)
 
     scripts:
+      - name: Create .env file from environment variables
+        script: |
+          set -e
+          cat > .env <<EOF
+          API_KEY=${API_KEY}
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+          ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
+          EOF
+
+          echo ".env created successfully"
+          ls -la .env
+
       - name: Install Flutter dependencies
         script: |
           flutter pub get
@@ -14,6 +34,7 @@ workflows:
       - name: Decode keystore
         script: |
           echo $KEYSTORE_BASE64 | base64 --decode > android/app/keystore.jks
+          ls -la android/app/keystore.jks
 
       - name: Build Release APK
         script: |
