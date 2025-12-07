@@ -1,40 +1,33 @@
 workflows:
   android-release:
     name: Android Release Build
+    instance_type: mac_mini_m1
 
     environment:
-      groups:
-        - keystore_credentials   # your keystore group
+      # This section tells Codemagic to inject the file you uploaded to the UI
+      android_signing:
+        - my_release_keystore  # <--- MAKE SURE THIS MATCHES THE NAME IN UI
 
       vars:
         API_KEY: Encrypted(API_KEY)
         SUPABASE_URL: Encrypted(SUPABASE_URL)
         SUPABASE_ANON_KEY: Encrypted(SUPABASE_ANON_KEY)
         ASSEMBLYAI_API_KEY: Encrypted(ASSEMBLYAI_API_KEY)
-        KEYSTORE_BASE64: Encrypted(KEYSTORE_BASE64)
+        # Note: No KEYSTORE_BASE64 variable needed here anymore
 
     scripts:
-      - name: Create .env file from environment variables
+      - name: Create .env file
         script: |
-          set -e
-          cat > .env <<EOF
-          API_KEY=${API_KEY}
-          SUPABASE_URL=${SUPABASE_URL}
-          SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-          ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
-          EOF
-
-          echo ".env created successfully"
-          ls -la .env
+          echo "API_KEY=$API_KEY" >> .env
+          echo "SUPABASE_URL=$SUPABASE_URL" >> .env
+          echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+          echo "ASSEMBLYAI_API_KEY=$ASSEMBLYAI_API_KEY" >> .env
 
       - name: Install Flutter dependencies
         script: |
           flutter pub get
 
-      - name: Decode keystore
-        script: |
-          echo $KEYSTORE_BASE64 | base64 --decode > android/app/keystore.jks
-          ls -la android/app/keystore.jks
+      # NOTICE: The "Decode keystore" script is GONE. Do not put it back.
 
       - name: Build Release APK
         script: |
