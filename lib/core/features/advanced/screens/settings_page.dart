@@ -1,6 +1,9 @@
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart'; 
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -20,14 +23,9 @@ class SettingsPage extends StatelessWidget {
         backgroundColor: primaryColor,
         elevation: 0,
       ),
-
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-
-          // ----------------------------
-          // 🔶 App Info Section
-          // ----------------------------
           const Text(
             "General",
             style: TextStyle(
@@ -37,7 +35,6 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
           _buildSettingTile(
             icon: Icons.info_outline,
             title: "App Version",
@@ -46,9 +43,6 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // ----------------------------
-          // 🔶 Monitoring Section
-          // ----------------------------
           const Text(
             "Monitoring & Debugging",
             style: TextStyle(
@@ -58,29 +52,21 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
           _buildSettingTile(
             icon: Icons.bug_report_outlined,
             title: "Test Crash (Crashlytics)",
             subtitle: "Force app crash for testing",
             color: Colors.red,
             onTap: () {
-              Fluttertoast.showToast(
-                msg: "App will crash in 3 seconds...",
-                backgroundColor: Colors.red,
-              );
-
+              
+              Fluttertoast.showToast(msg: "App will crash in 3 seconds...");
               Future.delayed(const Duration(seconds: 3), () {
                 FirebaseCrashlytics.instance.crash();
               });
             },
           ),
-
           const SizedBox(height: 30),
 
-          // ----------------------------
-          // 🔶 Contact
-          // ----------------------------
           const Text(
             "Help & Support",
             style: TextStyle(
@@ -91,23 +77,62 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
+          // ============================
+          // Contact tile with robust mail handling
+          // ============================
           _buildSettingTile(
             icon: Icons.email_outlined,
             title: "Contact Us",
             subtitle: "kumarisurbhi.ctps@gmail.com",
-            onTap: () {
-              Fluttertoast.showToast(msg: "Contact feature coming soon!");
+            onTap: () async {
+              
+              final Uri emailUri = Uri(
+                scheme: 'mailto',
+                path: 'kumarisurbhi.ctps@gmail.com',
+                queryParameters: {
+                  'subject': 'Support Needed',
+                  'body': 'Hi,\n\nI would like help with...',
+                },
+              );
+
+              try {
+                // Prefer opening external mail app
+                if (await canLaunchUrl(emailUri)) {
+                  await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+                } else {
+                  // Fallback: copy the email to clipboard and notify the user
+                  await Clipboard.setData(
+                      const ClipboardData(text: 'kumarisurbhi.ctps@gmail.com'));
+
+                  // Use ScaffoldMessenger for an in-app message (works reliably)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No mail app found — email copied to clipboard.'),
+                    ),
+                  );
+                }
+              } catch (e) {
+                // Show a minimal toast on error
+                Fluttertoast.showToast(msg: 'Could not open email app: $e');
+
+                // And copy to clipboard as a second fallback
+                await Clipboard.setData(
+                    const ClipboardData(text: 'kumarisurbhi.ctps@gmail.com'));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Email copied to clipboard.'),
+                  ),
+                );
+              }
             },
           ),
-
-          
         ],
       ),
     );
   }
 
   // -----------------------------------------
-  // 🔧 Reusable Setting Tile
+  // Reusable Setting Tile
   // -----------------------------------------
   Widget _buildSettingTile({
     required IconData icon,

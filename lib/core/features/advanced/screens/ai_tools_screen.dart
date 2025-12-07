@@ -1,136 +1,4 @@
-// import 'package:flutter/material.dart';
 
-// class AiToolsScreen extends StatelessWidget {
-//   const AiToolsScreen({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     const Color primaryColor = Color(0xFFF46D3A);
-//     const Color backgroundColor = Color(0xFFFFF6F0);
-
-//     return Scaffold(
-//       backgroundColor: backgroundColor,
-//       appBar: AppBar(
-//         title: const Text("AI Tools"),
-//         backgroundColor: primaryColor,
-//         elevation: 0,
-//       ),
-
-//       body: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: ListView(
-//           children: [
-
-//             const SizedBox(height: 10),
-
-//             _buildToolCard(
-//               title: "AI Note Assistant",
-//               subtitle: "Generate smart notes, summaries, and quick ideas.",
-//               icon: Icons.psychology_alt,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   const SnackBar(content: Text("Coming Soon…")),
-//                 );
-//               },
-//             ),
-
-//             const SizedBox(height: 12),
-
-//             _buildToolCard(
-//               title: "Voice to Text",
-//               subtitle: "Convert speech into text using AI transcription.",
-//               icon: Icons.mic,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   const SnackBar(content: Text("Voice tool coming soon 🎤")),
-//                 );
-//               },
-//             ),
-
-//             const SizedBox(height: 12),
-
-//             _buildToolCard(
-//               title: "AI Text Improve",
-//               subtitle: "Fix grammar, rewrite notes, or enhance writing.",
-//               icon: Icons.upgrade,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   const SnackBar(content: Text("Enhancement tool coming soon ✨")),
-//                 );
-//               },
-//             ),
-
-//             const SizedBox(height: 12),
-
-//             _buildToolCard(
-//               title: "AI Chat",
-//               subtitle: "Ask anything to your personal assistant.",
-//               icon: Icons.chat_bubble_outline,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   const SnackBar(content: Text("AI Chat coming soon 🤖")),
-//                 );
-//               },
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildToolCard({
-//     required String title,
-//     required String subtitle,
-//     required IconData icon,
-//     required VoidCallback onTap,
-//   }) {
-//     return Card(
-//       elevation: 3,
-//       shadowColor: Colors.black12,
-//       shape: RoundedRectangleBorder(
-//         borderRadius: BorderRadius.circular(16),
-//       ),
-//       child: InkWell(
-//         onTap: onTap,
-//         borderRadius: BorderRadius.circular(16),
-//         child: Padding(
-//           padding: const EdgeInsets.all(18),
-//           child: Row(
-//             children: [
-//               CircleAvatar(
-//                 radius: 28,
-//                 backgroundColor: const Color(0xFFF46D3A).withOpacity(0.15),
-//                 child: Icon(icon, size: 32, color: const Color(0xFFF46D3A)),
-//               ),
-//               const SizedBox(width: 18),
-//               Expanded(
-//                 child: Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     Text(title,
-//                         style: const TextStyle(
-//                           fontSize: 18,
-//                           fontWeight: FontWeight.bold,
-//                         )),
-//                     const SizedBox(height: 6),
-//                     Text(subtitle,
-//                         style: const TextStyle(
-//                           fontSize: 14,
-//                           color: Colors.grey,
-//                         )),
-//                   ],
-//                 ),
-//               ),
-//               const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-//-------------------------------------------------------------------------------
 
 
 import 'dart:convert';
@@ -138,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// ❌ The top-level variable has been REMOVED
 
 class AiToolsScreen extends StatefulWidget {
   const AiToolsScreen({super.key});
@@ -163,7 +30,6 @@ class _AiToolsScreenState extends State<AiToolsScreen> {
     _apiKey = dotenv.env['API_KEY'] ?? "API_KEY_NOT_FOUND";
 
     if (_apiKey == "API_KEY_NOT_FOUND") {
-      // Optional: Show an error in your chat or console
       print("Error: API_KEY not found in .env file.");
       _messages.add({
         "role": "ai",

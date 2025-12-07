@@ -18,7 +18,7 @@ class AuthProvider extends ChangeNotifier {
   // Initialization method
   Future<void> _initializeGoogleSignIn() async {
     try {
-      // --- CHANGED 1: initialize() now takes NO parameters ---
+      // initialize() 
       await GoogleSignIn.instance.initialize();
     } catch (e) {
       debugPrint("Google Sign-In Initialization Error: $e");
@@ -37,7 +37,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       _setLoading(true);
 
-      // --- CHANGED 2: 'authenticate()' returns a 'GoogleSignInAccount' ---
+      // authenticate()' returns a 'GoogleSignInAccount' ---
       final GoogleSignInAccount? googleUser =
           await GoogleSignIn.instance.authenticate();
 
@@ -46,12 +46,12 @@ class AuthProvider extends ChangeNotifier {
         return "Cancelled by user";
       }
 
-      // --- CHANGED 3: Get 'authentication' from the 'googleUser' ---
+      // Get 'authentication' from the 'googleUser' ---
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // 4. Create the Firebase credential
-      // (This part was correct)
+      //  Create the Firebase credential
+     
       final OAuthCredential credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
         accessToken: null,
@@ -71,7 +71,7 @@ class AuthProvider extends ChangeNotifier {
 
   // -----------------------------------
   // EMAIL LOGIN
-  // (No changes needed)
+  //
   // -----------------------------------
   Future<String?> login(String email, String password) async {
     try {
@@ -87,7 +87,7 @@ class AuthProvider extends ChangeNotifier {
 
   // -----------------------------------
   // EMAIL SIGN-UP
-  // (No changes needed)
+  // 
   // -----------------------------------
   Future<String?> signup(String email, String password) async {
     try {
@@ -103,7 +103,7 @@ class AuthProvider extends ChangeNotifier {
 
   // -----------------------------------
   // LOGOUT
-  // (No changes needed)
+  // 
   // -----------------------------------
   Future<void> logout() async {
     // Sign out from Google

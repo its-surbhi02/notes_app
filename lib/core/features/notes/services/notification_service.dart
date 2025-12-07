@@ -15,11 +15,11 @@ class NotificationService {
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   
-  // NEW: Plugin to show notifications locally
+  // Plugin to show notifications locally
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // NEW: Android Channel (Required for Android 8+)
+  //Android Channel 
   final AndroidNotificationChannel _channel = const AndroidNotificationChannel(
     'high_importance_channel', // id
     'High Importance Notifications', // title
@@ -40,8 +40,8 @@ class NotificationService {
       return;
     }
 
-    // B. Initialize Local Notifications (For Foreground Pop-up)
-    // '@mipmap/ic_launcher' is the default app icon in Android
+    //  Initialize Local Notifications (For Foreground Pop-up)
+
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -87,7 +87,6 @@ class NotificationService {
               _channel.name,
               channelDescription: _channel.description,
               icon: '@mipmap/ic_launcher', // Uses your app icon
-              // Importance.high ensures the pop-up shows visually
               importance: Importance.high,
               priority: Priority.high,
             ),

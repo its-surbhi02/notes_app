@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:notes/core/features/auth/screen/home_screen.dart';
-// import 'package:provider/provider.dart'; // No longer used, can be removed
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// import '../provider/auth_provider.dart'; // No longer used, can be removed
 import 'package:fluttertoast/fluttertoast.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -22,7 +20,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final confirmPassword = TextEditingController();
 
   bool _isLoading = false;
-  bool _agree = false; // Button will be disabled if this is false
+  bool _agree = false; 
 
   @override
   void dispose() {
@@ -46,10 +44,9 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // --- FIX 1: Robust error handling ---
+  
   Future<void> _createAccount() async {
-    // Note: The terms check is now handled by the button's disabled state,
-    // but keeping this here is good redundant validation.
+
     if (!_agree) {
       showToast("Please agree to the terms.");
       return;
@@ -173,11 +170,11 @@ class _SignupScreenState extends State<SignupScreen> {
               _gap(10),
 
               /// Sign Up Button
-              // --- FIX 2: Full-width button ---
+       
               SizedBox(
-                width: double.infinity, // This makes the button take full width
+                width: double.infinity, 
                 child: ElevatedButton(
-                  // --- FIX 3: Disable if loading or terms not agreed ---
+                  // Disable if loading or terms not agreed ---
                   onPressed: (_isLoading || !_agree) ? null : _createAccount,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,

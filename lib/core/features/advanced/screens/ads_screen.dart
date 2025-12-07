@@ -26,11 +26,11 @@ class _AdsScreenState extends State<AdsScreen> {
   void initState() {
     super.initState();
 
-    // ⭐ VERY IMPORTANT: You must initialize the SDK before loading ads!
+    //  initialize the SDK before loading ads!
     MobileAds.instance.initialize().then((InitializationStatus status) {
       print('Initialization done: ${status.adapterStatuses}');
       
-      // Now it's safe to load your ads
+      
       _loadBannerAd();
       _loadInterstitialAd();
       _loadRewardedAd();
